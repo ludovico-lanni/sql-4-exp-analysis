@@ -75,19 +75,43 @@ def main():
 
     st.markdown("## Generate the Final SQL Query")
 
+    # Check if all fields have inputs
+    def validate_inputs():
+        if not assignments_sql.strip():
+            return False
+        if not all(value.strip() for value in assignments_mapping.values()):
+            return False
+        if not entry_point_sql.strip():
+            return False
+        if not all(value.strip() for value in entry_point_mapping.values()):
+            return False
+        for fact in fact_queries:
+            if not fact["query"].strip():
+                return False
+            if not all(value.strip() for value in fact["mapping"].values() if isinstance(value, str)):
+                return False
+            if not fact["mapping"]["fact_columns"]:
+                return False
+        return True
+
     # Generate SQL button
     if st.button("Generate Final SQL Query"):
-        try:
-            final_sql = sql_builder(assignments_sql, assignments_mapping, entry_point_sql, entry_point_mapping, fact_queries)
-            # Beautify the SQL query
-            formatted_sql = sqlparse.format(final_sql, reindent=True, keyword_case='upper')
-            st.success("Final SQL Query Generated Successfully!")
+        if validate_inputs():
+            try:
+                final_sql = sql_builder(assignments_sql, assignments_mapping, entry_point_sql, entry_point_mapping,
+                                        fact_queries)
+                # Beautify the SQL query
+                formatted_sql = sqlparse.format(final_sql, reindent=True, keyword_case='upper')
+                st.success("Final SQL Query Generated Successfully!")
 
-            # Display the generated SQL as a code block
-            st.code(formatted_sql, language='sql')
+                # Display the generated SQL as a code block
+                st.code(formatted_sql, language='sql')
 
-        except Exception as e:
-            st.error(f"An error occurred: {str(e)}")
+            except Exception as e:
+                st.error(f"An error occurred: {str(e)}")
+        else:
+            st.error("Please ensure all fields have valid inputs before generating the SQL query.")
+
 
 if __name__ == "__main__":
     main()
