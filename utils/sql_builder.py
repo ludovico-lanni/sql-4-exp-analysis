@@ -63,9 +63,9 @@ def sql_builder(assignments_query, assignments_mapping, entry_point_query, entry
         """
         exposures__customers as (
             select
-                a.{assignments_id} as customer_id,
+                a.{assignments_id} as rand_unit_id,
                 a.{assignments_variant} as variant,
-                a.{assignments_date} as p_first_exposure_date,
+                a.{assignments_date} as first_assignment_date,
                 e.{entry_point_date} as entry_point_date
             from {assignments_sql} a
             inner join {entry_point_sql} e
@@ -105,14 +105,14 @@ def sql_builder(assignments_query, assignments_mapping, entry_point_query, entry
             """
             merge__fact_{i} as (
                 select
-                    e.customer_id,
+                    e.rand_unit_id,
                     e.variant,
-                    e.p_first_exposure_date,
+                    e.first_assignment_date,
                     e.entry_point_date,
                     {coalesce_columns_sql}
                 from exposures__customers e
                 left join {i} f
-                on e.customer_id = f.{fact_id} and (f.{fact_date} >= e.entry_point_date or f.{fact_date} is null)
+                on e.rand_unit_id = f.{fact_id} and (f.{fact_date} >= e.entry_point_date or f.{fact_date} is null)
                 group by 1, 2, 3, 4
             )""".format(
                 i=fact_table_name,
@@ -124,7 +124,7 @@ def sql_builder(assignments_query, assignments_mapping, entry_point_query, entry
         merge_ctes.append(merge_cte)
 
     # Final merge CTE combining all merge__fact CTEs
-    final_merge_cte = "merge__all as (\n        select\n            customer_id, variant, p_first_exposure_date, entry_point_date"
+    final_merge_cte = "merge__all as (\n        select\n            rand_unit_id, variant, first_assignment_date, entry_point_date"
     for i, fact in enumerate(fact_queries):
         _, fact_table_name = process_query(fact['query'])
         fact_mapping = fact['mapping']
@@ -136,7 +136,7 @@ def sql_builder(assignments_query, assignments_mapping, entry_point_query, entry
 
     final_merge_cte += "\n        from exposures__customers"
     for i in range(len(fact_queries)):
-        final_merge_cte += "\n        join merge__fact_{i} using(customer_id, variant, p_first_exposure_date, entry_point_date)".format(i=fact_table_name)
+        final_merge_cte += "\n        join merge__fact_{i} using(rand_unit_id, variant, first_assignment_date, entry_point_date)".format(i=fact_table_name)
     final_merge_cte += "\n    )"
 
     # Combine all CTEs into the final SQL
