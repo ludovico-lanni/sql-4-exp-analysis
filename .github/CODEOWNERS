@@ -1,0 +1,5 @@
+# This is the CODEOWNERS file.
+# Lines starting with '#' are comments.
+
+# Set yourself as the owner for all files in the repository
+* @ludovico-lanni
